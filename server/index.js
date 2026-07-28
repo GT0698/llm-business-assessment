@@ -217,12 +217,21 @@ function roiCalcServer(s, horizon) {
   return { revenue, net, roi, payback }
 }
 function fmtNum(n) { if (!isFinite(n)) return '∞'; const a = Math.abs(n); if (a >= 1e8) return (n / 1e8).toFixed(2) + '亿'; if (a >= 1e4) return (n / 1e4).toFixed(1) + '万'; return Math.round(n).toString() }
+function fmtMoney(n, currency = '元') {
+  const unit = String(currency || '元').trim()
+  const normalized = unit.toUpperCase()
+  const mark = (['元', '人民币', 'CNY', 'RMB', '¥', '￥'].includes(normalized) || ['元', '人民币', '¥', '￥'].includes(unit)) ? '¥'
+    : (['美元', 'USD', 'US$', '$'].includes(normalized) || ['美元', '$'].includes(unit)) ? '$'
+      : (['欧元', 'EUR', '€'].includes(normalized) || ['欧元', '€'].includes(unit)) ? '€'
+        : unit
+  return ['¥', '$', '€', '£'].includes(mark) ? `${mark}${fmtNum(n)}` : `${fmtNum(n)}${mark}`
+}
 function financialContext(mon, roi) {
   let out = ''
   if (mon?.model) out += `\n\n【商业化方案】模式：${mon.model}；定价：${(mon.pricing || []).map((t) => `${t.tier} ${t.price}(${t.forWho})`).join('；')}`
   if (roi?.scenarios?.length) {
     const cur = roi.currency || '元', h = roi.horizonMonths || 12
-    const lines = roi.scenarios.map((s) => { const k = roiCalcServer(s, h); return `- ${s.name}：期内收入 ${cur}${fmtNum(k.revenue)}，净利润 ${cur}${fmtNum(k.net)}，ROI ${isFinite(k.roi) ? Math.round(k.roi * 100) + '%' : '∞'}，回本 ${isFinite(k.payback) ? Math.ceil(k.payback) + '月' : '—'}` }).join('\n')
+    const lines = roi.scenarios.map((s) => { const k = roiCalcServer(s, h); return `- ${s.name}：期内收入 ${fmtMoney(k.revenue, cur)}，净利润 ${fmtMoney(k.net, cur)}，ROI ${isFinite(k.roi) ? Math.round(k.roi * 100) + '%' : '∞'}，回本 ${isFinite(k.payback) ? Math.ceil(k.payback) + '月' : '—'}` }).join('\n')
     out += `\n\n【ROI/收入预估】货币 ${cur}，评估期 ${h} 个月：\n${lines}`
   }
   return out

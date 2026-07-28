@@ -807,9 +807,14 @@ code { font-family: var(--mono); background: #0008; padding: 1px 5px; border-rad
 .export-all-label { font-size: 13px; font-weight: 600; margin-right: 4px; }
 .export-all-row button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 13px; color: var(--text); cursor: pointer; font-size: 13px; font-family: inherit; transition: border-color 0.15s; }
 .export-all-row button:hover { border-color: var(--accent); }
+.export-all-row button:disabled { cursor: not-allowed; opacity: 0.45; border-color: var(--line); }
+.export-all-hint { margin-top: 9px; font-size: 11.5px; color: var(--faint); }
 .export-all-secs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.export-all-secs span { font-size: 11.5px; color: var(--faint); }
-.export-all-secs span.on { color: #8fe6ac; }
+.export-section { display: inline-flex; align-items: center; gap: 5px; background: var(--bg-soft); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; cursor: pointer; user-select: none; }
+.export-section input { margin: 0; accent-color: var(--accent); }
+.export-section span { font-size: 11.5px; color: var(--text); }
+.export-section-all { border-color: var(--accent); }
+.export-section.disabled { cursor: not-allowed; opacity: 0.4; }
 .export-all-secs em { font-style: normal; margin-left: auto; font-size: 11.5px; color: var(--muted); }
 
 /* ================= Flow (产品主线 wizard) ================= */

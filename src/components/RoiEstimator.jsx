@@ -1,12 +1,6 @@
 import { useEffect, useState } from 'react'
+import { currencyMark, formatCompactNumber, formatMoney } from '../money.js'
 
-const fmt = (n) => {
-  if (!isFinite(n)) return '∞'
-  const a = Math.abs(n)
-  if (a >= 1e8) return (n / 1e8).toFixed(2) + '亿'
-  if (a >= 1e4) return (n / 1e4).toFixed(1) + '万'
-  return Math.round(n).toLocaleString()
-}
 const pct = (n) => (isFinite(n) ? Math.round(n * 100) + '%' : '∞')
 
 function calc(s, horizon) {
@@ -53,16 +47,16 @@ export default function RoiEstimator({ data }) {
       </div>
 
       <div className="roi-kpis">
-        <div className="roi-kpi"><span>付费用户</span><b>{fmt(k.paying)}</b></div>
-        <div className="roi-kpi"><span>MRR</span><b>{cur}{fmt(k.mrr)}</b></div>
-        <div className="roi-kpi"><span>期内收入</span><b>{cur}{fmt(k.revenue)}</b></div>
-        <div className={`roi-kpi ${k.net >= 0 ? 'pos' : 'neg'}`}><span>净利润</span><b>{cur}{fmt(k.net)}</b></div>
+        <div className="roi-kpi"><span>付费用户</span><b>{formatCompactNumber(k.paying)}</b></div>
+        <div className="roi-kpi"><span>MRR</span><b>{formatMoney(k.mrr, cur)}</b></div>
+        <div className="roi-kpi"><span>期内收入</span><b>{formatMoney(k.revenue, cur)}</b></div>
+        <div className={`roi-kpi ${k.net >= 0 ? 'pos' : 'neg'}`}><span>净利润</span><b>{formatMoney(k.net, cur)}</b></div>
         <div className={`roi-kpi ${k.roi >= 0 ? 'pos' : 'neg'}`}><span>ROI</span><b>{pct(k.roi)}</b></div>
         <div className="roi-kpi"><span>回本周期</span><b>{isFinite(k.payback) ? Math.ceil(k.payback) + '月' : '—'}</b></div>
       </div>
 
       <div className="roi-edit">
-        <div className="roi-edit-h">关键假设（可调，实时重算 · {cur}）</div>
+        <div className="roi-edit-h">关键假设（可调，实时重算 · {currencyMark(cur)}）</div>
         <div className="roi-grid">
           {FIELDS.map(([key, label]) => (
             <label className="roi-field" key={key}>
@@ -81,7 +75,7 @@ export default function RoiEstimator({ data }) {
             return (
               <div className="roi-barwrap" key={i}>
                 <div className="roi-bar-track"><span className={n >= 0 ? 'pos' : 'neg'} style={{ height: `${Math.max(3, Math.abs(n) / maxAbs * 100)}%` }} /></div>
-                <div className="roi-bar-label">{x.name || NAMES[i]}<em>{cur}{fmt(n)}</em></div>
+                <div className="roi-bar-label">{x.name || NAMES[i]}<em>{formatMoney(n, cur)}</em></div>
               </div>
             )
           })}
