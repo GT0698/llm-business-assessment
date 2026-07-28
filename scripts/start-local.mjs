@@ -58,7 +58,7 @@ const frontend = spawn(process.execPath, viteArgs, {
   },
 })
 
-console.log('\n[local] 商业范式评估已启动')
+console.log('\n[local] 大模型商业范式评估已启动')
 console.log(`[local] 使用地址：http://127.0.0.1:${webPort}`)
 console.log(`[local] 本地代理：http://127.0.0.1:${apiPort}`)
 console.log('[local] 关闭此终端窗口或按 Ctrl+C 即可停止\n')
