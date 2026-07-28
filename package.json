@@ -1,7 +1,7 @@
 {
   "name": "llm-paradigms",
   "private": true,
-  "version": "0.3.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "local": "node scripts/start-local.mjs",

@@ -102,8 +102,8 @@ export default function Home() {
             <em>机器主导 · 人只验收</em>
           </div>
           <p className="note">
-            后端用 Express 代理调用 Claude（<code>claude-opus-4-8</code>），API key 仅存在服务端。
-            运行前先 <code>export ANTHROPIC_API_KEY=…</code>
+            模型由右下角「模型设置」统一管理，支持 Claude、DeepSeek、OpenCode Go 及兼容 API。
+            密钥可仅保存在当前浏览器，或由本地服务端环境变量提供；请求仅经本机服务转发。
           </p>
         </footer>
       </div>
