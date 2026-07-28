@@ -14,11 +14,11 @@ export const PROVIDERS = {
   },
   deepseek: {
     label: 'DeepSeek',
-    baseURLPlaceholder: '默认 https://api.deepseek.com',
-    keyHint: '在 platform.deepseek.com 获取，留空则用服务端 DEEPSEEK_API_KEY',
+    baseURLPlaceholder: '默认 https://api.deepseek.com；OpenCode Go：https://opencode.ai/zen/go/v1',
+    keyHint: '可填 DeepSeek Key，或填 OpenCode Go Key 并使用上方的 OpenCode Go 地址',
     models: [
-      { id: 'deepseek-chat', name: 'DeepSeek-V3 · chat' },
-      { id: 'deepseek-reasoner', name: 'DeepSeek-R1 · reasoner' },
+      { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash · 更快更省' },
+      { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro · 更强分析' },
     ],
   },
 }
@@ -27,7 +27,10 @@ const DEFAULT = { provider: 'anthropic', model: 'claude-opus-4-8', apiKey: '', b
 
 export function getConfig() {
   try {
-    return { ...DEFAULT, ...JSON.parse(localStorage.getItem(KEY) || '{}') }
+    const config = { ...DEFAULT, ...JSON.parse(localStorage.getItem(KEY) || '{}') }
+    if (config.provider === 'deepseek' && config.model === 'deepseek-chat') config.model = 'deepseek-v4-flash'
+    if (config.provider === 'deepseek' && config.model === 'deepseek-reasoner') config.model = 'deepseek-v4-pro'
+    return config
   } catch {
     return { ...DEFAULT }
   }

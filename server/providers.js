@@ -3,7 +3,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 
-const DEFAULT_MODEL = { anthropic: 'claude-opus-4-8', deepseek: 'deepseek-chat' }
+const DEFAULT_MODEL = { anthropic: 'claude-opus-4-8', deepseek: 'deepseek-v4-flash' }
 const DEEPSEEK_BASE = 'https://api.deepseek.com'
 
 export function resolve(b = {}) {
@@ -62,8 +62,9 @@ export async function completeText(b) {
   let { provider, model } = resolve(b)
   const max_tokens = b.max_tokens || 2048
   if (provider === 'deepseek') {
-    // deepseek-reasoner does not support JSON mode — fall back to chat for structured calls.
-    if (b.format && /reasoner/.test(model)) model = 'deepseek-chat'
+    // Keep previously saved legacy model IDs working after DeepSeek V4 migration.
+    if (model === 'deepseek-chat') model = 'deepseek-v4-flash'
+    if (model === 'deepseek-reasoner') model = 'deepseek-v4-pro'
     const client = deepseekClient(b)
     let system = b.system || ''
     if (b.format?.schema) {
