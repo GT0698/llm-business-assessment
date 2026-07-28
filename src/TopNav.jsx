@@ -11,7 +11,7 @@ const LINKS = [
 export default function TopNav() {
   return (
     <header className="topnav">
-      <NavLink to="/" end className="tn-brand">⬡ LLM 范式工作台</NavLink>
+      <NavLink to="/" end className="tn-brand">⬡ 大模型商业范式评估</NavLink>
       <nav className="tn-links">
         {LINKS.map((l) => (
           <NavLink key={l.to} to={l.to} end={l.end} className={({ isActive }) => `tn-link ${isActive ? 'on' : ''}`}>
