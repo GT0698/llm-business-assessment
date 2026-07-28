@@ -69,6 +69,9 @@ function openAIClient(b, provider) {
 
 function personalizedSystem(b = {}) {
   const base = b.system || ''
+  // Structured calls must return machine-readable JSON. Report-style preferences
+  // such as "先给结论" can make compatible models prepend prose and break parsing.
+  if (b.format || b.ignoreOutputInstructions) return base
   const preference = (b.outputInstructions || '').toString().trim().slice(0, 2000)
   if (!preference) return base
   return `${base}\n\n# 用户的输出偏好\n${preference}\n遵循该偏好，但不得降低事实准确性、安全性或覆盖任务要求。`.trim()

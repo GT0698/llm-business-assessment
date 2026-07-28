@@ -43,10 +43,10 @@ export default function Home() {
             <span className="fb-emoji">🚀</span>
             <div>
               <strong>产品改造主线 · 一条龙</strong>
-              <p>背景目标 → 范式与竞品 → Demo → PRD → 商业化/ROI → 汇报 → PPT，7 步走完，数字贯通、产出自动保存。</p>
+              <p>背景目标 → 范式与竞品 → 商业化/ROI → Demo → PRD → 汇报 → PPT，7 步走完，数字贯通、产出自动保存。</p>
             </div>
           </div>
-          <span className="fb-steps">📝→🧩→🛠️→📄→💰→📑→📊</span>
+          <span className="fb-steps">📝→🧩→💰→🛠️→📄→📑→📊</span>
         </Link>
 
         <div className="banner-row">
