@@ -6,8 +6,8 @@ const MODELS = [
   { id: 'claude-opus-4-8', provider: 'anthropic', name: 'Opus 4.8 · 最强' },
   { id: 'claude-sonnet-4-6', provider: 'anthropic', name: 'Sonnet 4.6 · 均衡' },
   { id: 'claude-haiku-4-5', provider: 'anthropic', name: 'Haiku 4.5 · 最快' },
-  { id: 'deepseek-chat', provider: 'deepseek', name: 'DeepSeek-V3 · chat' },
-  { id: 'deepseek-reasoner', provider: 'deepseek', name: 'DeepSeek-R1 · reasoner' },
+  { id: 'deepseek-v4-flash', provider: 'deepseek', name: 'DeepSeek V4 Flash · 更快更省' },
+  { id: 'deepseek-v4-pro', provider: 'deepseek', name: 'DeepSeek V4 Pro · 更强分析' },
 ]
 const provOf = (id) => MODELS.find((m) => m.id === id)?.provider
 

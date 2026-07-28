@@ -1,81 +1,135 @@
-# LLM × toC 产品范式 · 七种 demo
+# 商业范式与商业价值评估工作台
 
-一个 React + Vite 站点：首页展示 LLM 导向 toC 产品的 **7 种范式**，每个范式点进去是一个**真实调用 Claude** 的可玩 demo。
+一个部署在本机的通用 AI 产品分析工作台。它用于判断产品适合采用哪种 LLM 产品范式、商业上是否值得做，并进一步生成商业分析、提案、PRD、演示文稿和可交互 Demo。
 
-## 范式
+核心评估方法保持行业通用；金融机构、互联网企业或其他行业的差异，通过产品输入和「报告与 PRD 输出偏好」控制，不会被写死在评估逻辑里。
 
-| # | 范式 | demo |
-|---|------|------|
-| 01 | 对话即产品 (Chat-native) | 纯聊天，流式 |
-| 02 | 角色陪伴 (Companion) | 三个不同人格的角色，语气各异 |
-| 03 | 创作工具 (Co-creation) | 选类型 → 生成 → 换一个 / 更长 / 更短 |
-| 04 | 嵌入式 Copilot | 编辑器里选中文字 → AI 改写/续写 → 一键应用 |
-| 05 | 任务代理 Agent | 给目标 → 自动拆解计划 → 逐步执行 |
-| 06 | 答案引擎 (AI-native rebuild) | 联网检索 + 结构化答案 + 来源 |
-| 07 | 聚合 / 路由层 | 同一 prompt 并排对比两个模型 |
+## 主要能力
 
-## 范式方法论页
+- 7 种 toC 产品范式的教学与可交互 Demo
+- AI 产品顾问：诊断产品、推荐主要与备选范式
+- 商业化方案、ROI 与收入情景评估
+- 竞品分析与多产品对比
+- 商业提案、完整 PRD、PPT 内容和可交互原型生成
+- 本地产品库与结果缓存
+- 全站统一的模型服务商、模型和输出偏好
 
-每个范式页右上角有 **📖 产品方法论** 入口（首页卡片也有），进入后是一页 curated 知识：
-产品设计要点 · 适用领域 · PRD 预览 · PRD 撰写要点 · 数据监测点 · 数据要素 · 主要应用案例。
+一条龙工作流按决策顺序组织：
 
-其中 **PRD 预览** 卡片可点击进入 `/prd/:id` —— 一个 **AI 生成完整 PRD** 的页面：
+```text
+背景与目标 → 范式与竞品 → 商业化与 ROI → Demo → PRD → 汇报 → PPT
+```
 
-- 用资深 LLM 产品专家的 system prompt（去 AI 味、拒绝常识堆砌、突出 LLM 独特性：幻觉控制 / 流式 / Token 成本 / 降级兜底 / 安全审核 / Prompt 工程）
-- 每个范式预置一份具体示例产品的「产品基本信息」（产品名 / 目标用户 / 核心大模型能力 / 核心痛点），**字段可编辑** —— 也能给你自己的产品生成；还能**从产品库一键导入**
-- 点「✨ 生成完整 PRD」流式产出一份含 *文档信息表 · 产品概述与核心价值 · 用户角色表 · 核心功能深拆（交互逻辑 + LLM 特有逻辑）· 非功能需求（TTFT/上下文窗口/合规过滤/幻觉抑制）· 埋点与数据看板（Token 消耗/点赞点踩闭环）· 风险与熔断降级* 的完整 Markdown 文档
-- 用 react-markdown + remark-gfm 渲染表格/块引用/分隔线；结果缓存在本地，可**复制 Markdown / 打印导出 PDF / 重新生成**
-- 另保留一份**结构化基线**（静态，无需 API key 即可查看）作为离线兜底
+所有耗时任务都会显示运行状态与等待时间。PRD 和汇报可分别导出 Markdown、Word 或 PDF；红队修订后的 PRD 会替换原版本，后续下载始终使用最新版。
 
-PRD 生成的服务端逻辑在 `/api/prd`（system prompt 在服务端，保证一致），同样支持 Claude / DeepSeek。
+## 稳定的本地启动
 
-## AI 产品顾问 Agent（首页 🧭）
+首次使用：
 
-1. 填入你的产品（定位 / 目标人群 / 界面形态 / 主要功能…），可**保存到产品库**（localStorage 持久化，可多个、可加载、可删除）。
-2. 填写目标或当前问题（增长 / 粘性 / 卡点…）。
-3. 点「咨询专家」→ Claude 做 **3-4 步专家诊断 → 推荐范式（含次选）→ 把范式落地到你这个产品的方案 → demo 设想 → 注意要点**，并给出跳到对应 demo / 方法论页的入口。
-4. 后端用结构化输出（json_schema）保证推荐落在 7 个范式之一。
+```bash
+npm install
+npm run local
+```
+
+以后只需要在项目目录运行：
+
+```bash
+npm run local
+```
+
+程序会自动寻找可用的前后端端口并打开正确页面，避免电脑里残留的旧进程造成端口冲突或连接到旧版本。关闭启动它的终端窗口，或按 `Ctrl+C`，即可停止本次服务。
+
+`npm run dev` 仍保留给开发调试使用，固定使用前端 5173、后端 8787。
+
+## 模型设置
+
+打开页面右下角的 **⚙️ 模型设置**。当前支持：
+
+| 服务商 | 协议 | 默认 Base URL | 模型 |
+|---|---|---|---|
+| Claude | Anthropic | `https://api.anthropic.com` | Opus / Sonnet / Haiku |
+| DeepSeek 官方 | OpenAI 兼容 | `https://api.deepseek.com` | V4 Flash / V4 Pro |
+| OpenCode Go | OpenAI 兼容 | `https://opencode.ai/zen/go/v1` | V4 Flash / V4 Pro |
+| 其他兼容接口 | OpenAI 兼容 | 自行填写 | 自行填写模型 ID |
+
+配置流程：
+
+1. 选择服务商。
+2. 选择预置模型，或在「其他兼容接口」中填写服务商文档给出的模型 ID。
+3. 填写该服务商单独创建的 API Key。
+4. 非预置服务商必须填写 Base URL；如果复制的是完整 `/chat/completions` 地址，服务端会自动规整。
+5. 点击「测试连接」，成功后保存。
+
+API Key 和模型设置保存在当前浏览器的本地存储中，只会发往本机运行的 Express 代理。它们不会写入 Git 仓库。若使用第三方中转站，数据安全、模型真实性、限流和稳定性由中转站决定。
+
+### 使用环境变量
+
+不想在网页中填写 Key 时，也可以在启动前设置：
+
+```bash
+export ANTHROPIC_API_KEY=...
+export DEEPSEEK_API_KEY=...
+export OPENCODE_API_KEY=...
+export OPENAI_COMPATIBLE_API_KEY=...
+npm run local
+```
+
+只需配置实际使用的一个。自定义 OpenAI 兼容服务商仍需在网页中填写 Base URL 和模型 ID。
+
+## 个性化输出
+
+模型设置中有「报告与 PRD 输出偏好」。它会统一作用于商业分析、提案、PRD 和其他模型输出，但不会改变通用评估框架。
+
+默认偏好是：
+
+> 先给结论，再说明依据、风险、待验证项和下一步。表达专业、具体、适合业务评审。
+
+你可以改成自己的汇报口径，例如要求：
+
+- 面向管理层，首屏给出做/不做/有条件做；
+- 明确区分事实、假设和推断；
+- PRD 加入验收标准、埋点和降级方案；
+- 报告适配金融机构的合规评审，或互联网企业的增长评审。
+
+## 能力边界
+
+- 项目内置的联网检索目前仅走 Anthropic 的 web search 工具。
+- DeepSeek、OpenCode Go 和其他 OpenAI 兼容接口会自动降级为模型内置知识回答，因此最新信息需要人工核验。
+- 商业化、ROI、红队评审和 PPT 等结构化任务会隔离报告写作偏好，并在模型返回非标准 JSON 时自动使用兼容模式重试。
+- PPT 生成不要求模型具备图片或多模态能力：模型只负责幻灯片文字结构，本机负责生成 `.pptx` 文件。
+- 中转站即使声称兼容 Claude，也不一定完整支持 Anthropic 的工具调用、结构化输出或流式协议；请以「测试连接」和实际功能测试为准。
+- 模型给出的商业数据和 ROI 是决策假设，不是已验证事实，正式立项前仍需补充真实业务数据。
 
 ## 架构
 
+```text
+浏览器（React）
+    │ /api
+    ▼
+本机 Express 代理
+    ├─ Anthropic 协议 ── Claude / Claude 中转
+    └─ OpenAI 兼容协议 ── DeepSeek / OpenCode Go / 其他服务商
 ```
-浏览器 (React)  ──/api──▶  Express 代理 (server/index.js)  ──▶  Claude API
-                          ↑ API key 只存在这里
-```
 
-API key 永远不进前端。前端通过 Vite dev proxy 把 `/api` 转发到 Express（端口 8787）。
+主要文件：
 
-## 模型设置（支持 Claude + DeepSeek）
+- `src/modelConfig.js`：服务商、模型、本地配置和迁移逻辑
+- `src/SettingsModal.jsx`：模型与个性化输出设置
+- `server/providers.js`：Anthropic / OpenAI 兼容协议适配
+- `server/index.js`：业务 API、商业分析与文档生成
+- `scripts/start-local.mjs`：自动端口检测与本地一键启动
+- `src/pages/*`：范式 Demo、顾问、商业分析和文档页面
 
-右下角悬浮 **⚙️ 模型设置**（全站可见）可切换：
-
-- **服务商**：Claude (Anthropic) / DeepSeek
-- **模型**：Opus 4.8 / Sonnet 4.6 / Haiku 4.5；DeepSeek-V3 (chat) / DeepSeek-R1 (reasoner)
-- **API Key / Base URL**：可填自己的 key（存浏览器本地，仅发往本项目服务端代理）；留空则用服务端环境变量
-- **测试连接** 一键自检
-
-DeepSeek 走 OpenAI 兼容协议（`https://api.deepseek.com`）。注意：**答案引擎**的联网检索仅 Claude 支持，DeepSeek 会自动降级为模型内置知识回答。
-「聚合/路由层」demo 可**跨服务商**并排对比（如 Opus 4.8 vs DeepSeek-V3）。
-
-## 运行
+## 开发与构建
 
 ```bash
-# 两个 key 至少配一个（也可在 ⚙️ 里填）：
-export ANTHROPIC_API_KEY=sk-ant-...
-export DEEPSEEK_API_KEY=sk-...
-npm install
-npm run dev
+npm run build
 ```
 
-然后打开 http://localhost:5173
+健康检查：
 
-- `npm run dev` 会用 concurrently 同时起后端代理 (8787) 和 Vite 前端 (5173)。
-- 默认模型 `claude-opus-4-8`；路由层 demo 可切换 Sonnet / Haiku。
-- 答案引擎用 `web_search` 服务端工具；若 key 未开通该工具，会自动回退到模型内置知识并提示。
+```text
+GET /api/health
+```
 
-## 文件
-
-- `server/index.js` — 代理：`/api/chat`（流式）、`/api/complete`（含结构化输出）、`/api/answer`（联网检索）
-- `src/paradigms.js` — 7 个范式的元数据（首页卡片）
-- `src/pages/*` — 每个范式一个页面
-- `src/api.js` — 前端调用封装
+成功时返回当前服务名称与版本号。

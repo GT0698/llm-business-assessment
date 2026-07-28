@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { streamDemo } from './api.js'
-import { Spinner } from './components.jsx'
+import OperationStatus from './components/OperationStatus.jsx'
 
 const BASE_CSS =
   "*{box-sizing:border-box}body{margin:0;background:#0c0e14;color:#e8ebf2;" +
@@ -14,7 +14,8 @@ window.AI = async function(prompt, opts){
   var base = '';
   try{ base = (window.parent && window.parent.location && window.parent.location.origin) || ''; }catch(e){}
   var body = { messages:[{role:'user',content:String(prompt)}], system: opts.system||'',
-    provider: cfg.provider, model: cfg.model, apiKey: cfg.apiKey, baseURL: cfg.baseURL,
+    provider: cfg.provider, model: cfg.provider==='openai-compatible' ? cfg.customModel : cfg.model,
+    apiKey: cfg.apiKey, baseURL: cfg.baseURL, outputInstructions: cfg.outputInstructions,
     max_tokens: opts.max_tokens||800 };
   var res = await fetch(base + '/api/chat', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(!res.ok || !res.body){ throw new Error('AI 请求失败 ('+res.status+')'); }
@@ -74,7 +75,11 @@ export default function DemoSandbox({ spec, paradigm, productName }) {
       {!html && !busy && (
         <button className="primary demo-build-btn" onClick={gen}>🛠️ 把这个 Demo 做出来（真实可交互）</button>
       )}
-      {busy && <div className="demo-gen"><Spinner label={`正在生成可交互 Demo${chars ? `（已 ${chars} 字）` : ''}`} /></div>}
+      <OperationStatus
+        active={busy}
+        label="正在生成可交互 Demo"
+        detail={chars ? `模型仍在输出，已收到 ${chars} 个字符。` : '正在规划界面、交互和核心功能。'}
+      />
       {err && <div className="error-box">⚠️ {err}</div>}
       {html && !busy && (
         <div className="demo-live">

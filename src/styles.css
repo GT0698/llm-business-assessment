@@ -807,9 +807,14 @@ code { font-family: var(--mono); background: #0008; padding: 1px 5px; border-rad
 .export-all-label { font-size: 13px; font-weight: 600; margin-right: 4px; }
 .export-all-row button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 13px; color: var(--text); cursor: pointer; font-size: 13px; font-family: inherit; transition: border-color 0.15s; }
 .export-all-row button:hover { border-color: var(--accent); }
+.export-all-row button:disabled { cursor: not-allowed; opacity: 0.45; border-color: var(--line); }
+.export-all-hint { margin-top: 9px; font-size: 11.5px; color: var(--faint); }
 .export-all-secs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.export-all-secs span { font-size: 11.5px; color: var(--faint); }
-.export-all-secs span.on { color: #8fe6ac; }
+.export-section { display: inline-flex; align-items: center; gap: 5px; background: var(--bg-soft); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; cursor: pointer; user-select: none; }
+.export-section input { margin: 0; accent-color: var(--accent); }
+.export-section span { font-size: 11.5px; color: var(--text); }
+.export-section-all { border-color: var(--accent); }
+.export-section.disabled { cursor: not-allowed; opacity: 0.4; }
 .export-all-secs em { font-style: normal; margin-left: auto; font-size: 11.5px; color: var(--muted); }
 
 /* ================= Flow (产品主线 wizard) ================= */
@@ -884,12 +889,33 @@ code { font-family: var(--mono); background: #0008; padding: 1px 5px; border-rad
 .flow-finish p { margin: 0 0 10px; }
 .flow-finish a { text-decoration: none; }
 .flow-nav { display: flex; justify-content: space-between; margin-top: 16px; }
+.flow-action-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.flow-export { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.flow-export span { font-size: 12px; color: var(--faint); margin-right: 2px; }
+.flow-export button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 11px; color: var(--text); cursor: pointer; font-size: 12.5px; font-family: inherit; }
+.flow-export button:hover { border-color: var(--accent); }
+
+.op-status {
+  display: flex; align-items: center; gap: 12px; margin: 12px 0 16px; padding: 12px 14px;
+  background: #172033; border: 1px solid #44629a; border-radius: 12px; color: var(--text);
+}
+.op-status-ring {
+  width: 18px; height: 18px; flex: 0 0 18px; border-radius: 50%;
+  border: 2px solid #7c9cff44; border-top-color: var(--accent); animation: op-spin 0.9s linear infinite;
+}
+.op-status div { flex: 1; min-width: 0; }
+.op-status strong { display: block; font-size: 13.5px; }
+.op-status span:not(.op-status-ring) { display: block; color: var(--muted); font-size: 12.2px; margin-top: 2px; }
+.op-status em { font-style: normal; color: #a9bcff; background: #7c9cff22; border: 1px solid #7c9cff55; border-radius: 999px; padding: 3px 9px; font-size: 11px; white-space: nowrap; }
+@keyframes op-spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 720px) {
   .flow-fields { grid-template-columns: 1fr; }
   .flow-fields .adv-field.short { grid-column: span 1; }
   .flow-cmp-pc { grid-template-columns: 1fr; }
   .flow-banner { flex-direction: column; align-items: flex-start; }
+  .op-status { align-items: flex-start; }
+  .op-status em { display: none; }
 }
 
 /* ================= TopNav ================= */
@@ -1119,7 +1145,7 @@ code { font-family: var(--mono); background: #0008; padding: 1px 5px; border-rad
 .gear-model { font-family: var(--mono); font-size: 12px; color: var(--muted); }
 
 .modal-overlay { position: fixed; inset: 0; z-index: 100; background: #04060caa; backdrop-filter: blur(4px); display: grid; place-items: center; padding: 20px; }
-.modal { width: 100%; max-width: 460px; background: var(--bg-soft); border: 1px solid var(--line); border-radius: 18px; padding: 24px; box-shadow: 0 30px 80px -30px #000; }
+.modal { width: 100%; max-width: 520px; max-height: calc(100vh - 40px); overflow: auto; background: var(--bg-soft); border: 1px solid var(--line); border-radius: 18px; padding: 24px; box-shadow: 0 30px 80px -30px #000; }
 .modal-head { display: flex; justify-content: space-between; align-items: center; }
 .modal-head h2 { margin: 0; font-size: 19px; }
 .modal-x { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; }
@@ -1128,8 +1154,9 @@ code { font-family: var(--mono); background: #0008; padding: 1px 5px; border-rad
 .cfg-label { display: block; font-size: 12px; color: var(--faint); margin: 14px 0 6px; }
 .cfg-input { width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; outline: none; }
 .cfg-input:focus { border-color: var(--accent); }
-.provider-seg { display: flex; gap: 8px; }
-.provider-seg button { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; cursor: pointer; color: var(--muted); transition: border-color 0.15s; }
+.cfg-textarea { min-height: 88px; resize: vertical; line-height: 1.55; }
+.provider-seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.provider-seg button { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; cursor: pointer; color: var(--muted); transition: border-color 0.15s; }
 .provider-seg button.on { background: var(--panel-2); border-color: var(--accent); color: var(--text); font-weight: 600; }
 .cfg-note { margin-top: 14px; font-size: 12.5px; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; }
 .cfg-note strong { color: var(--text); }

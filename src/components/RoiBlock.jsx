@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { genRoi } from '../api.js'
-import { Spinner } from '../components.jsx'
 import RoiEstimator from './RoiEstimator.jsx'
+import OperationStatus from './OperationStatus.jsx'
 
 export default function RoiBlock({ product, paradigm, paradigmDesc, monetization, cached, onResult }) {
   const [data, setData] = useState(cached || null)
@@ -20,7 +20,7 @@ export default function RoiBlock({ product, paradigm, paradigmDesc, monetization
   return (
     <div className="roi-block">
       {err && <div className="error-box">⚠️ {err}</div>}
-      {busy && <div className="gmon-loading"><Spinner label="测算 ROI 与预期收入" /></div>}
+      <OperationStatus active={busy} label="正在测算 ROI 与预期收入" detail="正在生成三种情景和可计算假设。" />
       {data && <RoiEstimator data={data} />}
       <button className="ghost gmon-btn" onClick={run} disabled={busy}>{busy ? '测算中…' : data ? '🔄 重新测算' : '📊 测算 ROI / 预期收入'}</button>
     </div>

@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { reviewDoc, streamRevise } from '../api.js'
 import { Spinner } from '../components.jsx'
+import OperationStatus from './OperationStatus.jsx'
 
 // Red-team review of a markdown doc + "revise per review" action.
 // `onRevise(fullMd)` lets the parent replace the source doc with the revision.
@@ -46,7 +47,8 @@ export default function RedTeam({ doc, kind = '文档', cached, onResult, onRevi
         )}
       </div>
       {err && <div className="error-box">⚠️ {err}</div>}
-      {busy && <div className="rt-loading"><Spinner label="多视角挑刺中" /></div>}
+      <OperationStatus active={busy} label="正在进行红队评审" detail="模型正在从多个维度评分并整理问题。" />
+      <OperationStatus active={revBusy} label="正在生成修订版 PRD" detail="完成后会自动替换当前 PRD，下载按钮也会切换到新版。" />
 
       {data && !busy && (
         <div className="rt-result">

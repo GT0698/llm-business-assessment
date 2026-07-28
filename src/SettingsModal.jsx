@@ -1,28 +1,43 @@
 import { useState } from 'react'
-import { PROVIDERS, getConfig, setConfig } from './modelConfig.js'
+import { PROVIDERS, activeModel, getConfig, setConfig } from './modelConfig.js'
 import { complete } from './api.js'
 
 export default function SettingsModal({ onClose }) {
   const [cfg, setCfg] = useState(getConfig())
-  const [test, setTest] = useState(null) // {ok, msg}
+  const [test, setTest] = useState(null)
   const [testing, setTesting] = useState(false)
 
   const prov = PROVIDERS[cfg.provider]
   const set = (patch) => setCfg((c) => ({ ...c, ...patch }))
 
   const onProvider = (provider) => {
-    const first = PROVIDERS[provider].models[0].id
-    set({ provider, model: first })
+    const next = PROVIDERS[provider]
+    set({
+      provider,
+      model: next.models[0]?.id || '',
+      customModel: '',
+      baseURL: next.defaultBaseURL,
+    })
     setTest(null)
   }
 
+  const validate = () => {
+    if (!activeModel(cfg)) return '请填写模型 ID'
+    if (cfg.provider === 'openai-compatible' && !cfg.baseURL.trim()) return '自定义服务商必须填写 Base URL'
+    return ''
+  }
+
   const save = () => {
+    const error = validate()
+    if (error) return setTest({ ok: false, msg: error })
     setConfig(cfg)
     onClose()
   }
 
   const runTest = async () => {
-    setConfig(cfg) // persist so the test uses current values
+    const error = validate()
+    if (error) return setTest({ ok: false, msg: error })
+    setConfig(cfg)
     setTesting(true)
     setTest(null)
     try {
@@ -46,7 +61,7 @@ export default function SettingsModal({ onClose }) {
           <h2>⚙️ 模型设置</h2>
           <button className="modal-x" onClick={onClose}>✕</button>
         </div>
-        <p className="modal-sub">选择服务商与模型。可填入自己的 API Key（存在浏览器本地，仅发往本项目的服务端代理）。</p>
+        <p className="modal-sub">服务商、模型和输出偏好全站生效。API Key 仅保存在本机浏览器，并发往本项目的本地代理。</p>
 
         <label className="cfg-label">服务商</label>
         <div className="provider-seg">
@@ -58,11 +73,20 @@ export default function SettingsModal({ onClose }) {
         </div>
 
         <label className="cfg-label">模型</label>
-        <select className="cfg-input" value={cfg.model} onChange={(e) => set({ model: e.target.value })}>
-          {prov.models.map((m) => (
-            <option key={m.id} value={m.id}>{m.name}</option>
-          ))}
-        </select>
+        {prov.models.length ? (
+          <select className="cfg-input" value={cfg.model} onChange={(e) => set({ model: e.target.value })}>
+            {prov.models.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        ) : (
+          <input
+            className="cfg-input"
+            value={cfg.customModel}
+            placeholder="填写服务商文档中的模型 ID"
+            onChange={(e) => set({ customModel: e.target.value })}
+          />
+        )}
 
         <label className="cfg-label">API Key（可选）</label>
         <input
@@ -73,7 +97,7 @@ export default function SettingsModal({ onClose }) {
           onChange={(e) => set({ apiKey: e.target.value })}
         />
 
-        <label className="cfg-label">Base URL（可选）</label>
+        <label className="cfg-label">Base URL{cfg.provider === 'openai-compatible' ? '（必填）' : '（可选）'}</label>
         <input
           className="cfg-input"
           value={cfg.baseURL}
@@ -81,12 +105,20 @@ export default function SettingsModal({ onClose }) {
           onChange={(e) => set({ baseURL: e.target.value })}
         />
 
-        {cfg.provider === 'deepseek' && (
-          <div className="cfg-note">
-            DeepSeek 走 OpenAI 兼容协议。注意：<strong>答案引擎</strong>（联网检索）目前仅 Claude 支持，
-            DeepSeek 会自动降级为模型内置知识回答。
-          </div>
-        )}
+        <label className="cfg-label">报告与 PRD 输出偏好（可选）</label>
+        <textarea
+          className="cfg-input cfg-textarea"
+          value={cfg.outputInstructions}
+          maxLength={2000}
+          placeholder="例如：先给结论，再列依据、风险、待验证项和下一步。"
+          onChange={(e) => set({ outputInstructions: e.target.value })}
+        />
+
+        <div className="cfg-note">
+          {cfg.provider === 'anthropic'
+            ? 'Claude 可使用项目内置的联网检索；使用中转站时，实际能力取决于中转站是否完整兼容 Anthropic 协议。'
+            : '当前服务商走 OpenAI 兼容协议。答案引擎会降级为模型内置知识回答，不保证包含最新信息。'}
+        </div>
 
         {test && <div className={`test-result ${test.ok ? 'ok' : 'bad'}`}>{test.ok ? '✓ ' : '✕ '}{test.msg}</div>}
 

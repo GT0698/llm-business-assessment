@@ -16,23 +16,71 @@ function parseModelJson(text) {
     .replace(/,\s*([}\]])/g, '$1')
     .replace(/([{[])\s*,/g, '$1')
   for (const candidate of [t, cleaned]) {
-    try { return JSON.parse(candidate) } catch {}
-    try { return JSON.parse(jsonrepair(candidate)) } catch {}
+    try {
+      const parsed = JSON.parse(candidate)
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed
+    } catch {}
+    try {
+      const repaired = JSON.parse(jsonrepair(candidate))
+      if (repaired && typeof repaired === 'object' && !Array.isArray(repaired)) return repaired
+    } catch {}
   }
   throw new Error('unparseable model JSON')
 }
 
+async function completeStructured(b, { system, messages, format, effort = 'low', max_tokens = 3000, label = '本次分析' }) {
+  const first = await completeText({ ...b, system, messages, format, effort, max_tokens })
+  try {
+    const parsed = parseModelJson(first)
+    const required = format?.schema?.required || []
+    if (!required.every((key) => Object.prototype.hasOwnProperty.call(parsed, key))) throw new Error('missing required fields')
+    return parsed
+  } catch {
+    // Some OpenAI-compatible services accept response_format but still prepend
+    // reasoning/prose or truncate the JSON. Retry once in plain-text strict mode.
+    const schema = JSON.stringify(format?.schema || {})
+    const retrySystem =
+      `${system}\n\n这是结构化输出重试。只输出一个完整 JSON 对象，不要分析过程、前言、Markdown 或代码块。` +
+      `必须严格符合以下 JSON Schema：\n${schema}`
+    const second = await completeText({
+      ...b,
+      system: retrySystem,
+      messages,
+      format: null,
+      ignoreOutputInstructions: true,
+      effort: 'low',
+      max_tokens: Math.max(max_tokens, 4000),
+    })
+    try {
+      const parsed = parseModelJson(second)
+      const required = format?.schema?.required || []
+      if (!required.every((key) => Object.prototype.hasOwnProperty.call(parsed, key))) throw new Error('missing required fields')
+      return parsed
+    } catch {
+      throw new Error(`${label}的模型返回格式不完整，系统已自动重试但仍无法解析。请重试一次，或在模型设置中切换更擅长结构化输出的模型。`)
+    }
+  }
+}
+
 const PORT = process.env.PORT || 8787
 
-if (!process.env.ANTHROPIC_API_KEY && !process.env.DEEPSEEK_API_KEY) {
+if (
+  !process.env.ANTHROPIC_API_KEY &&
+  !process.env.DEEPSEEK_API_KEY &&
+  !process.env.OPENCODE_API_KEY &&
+  !process.env.OPENAI_COMPATIBLE_API_KEY
+) {
   console.warn(
-    '\n[!] 未检测到 ANTHROPIC_API_KEY 或 DEEPSEEK_API_KEY。\n' +
-      '    可以 export 其一，或在网页右下角 ⚙️ 模型设置里填入 key。\n'
+    '\n[!] 未检测到服务端 API Key。\n' +
+      '    可以设置环境变量，或在网页右下角 ⚙️ 模型设置里填入 key。\n'
   )
 }
 
 const app = express()
 app.use(express.json({ limit: '2mb' }))
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, service: 'llm-paradigms', version: '1.0.0' })
+})
 
 // --- Streaming chat: writes raw text deltas to the response body ---
 app.post('/api/chat', async (req, res) => {
@@ -169,12 +217,21 @@ function roiCalcServer(s, horizon) {
   return { revenue, net, roi, payback }
 }
 function fmtNum(n) { if (!isFinite(n)) return '∞'; const a = Math.abs(n); if (a >= 1e8) return (n / 1e8).toFixed(2) + '亿'; if (a >= 1e4) return (n / 1e4).toFixed(1) + '万'; return Math.round(n).toString() }
+function fmtMoney(n, currency = '元') {
+  const unit = String(currency || '元').trim()
+  const normalized = unit.toUpperCase()
+  const mark = (['元', '人民币', 'CNY', 'RMB', '¥', '￥'].includes(normalized) || ['元', '人民币', '¥', '￥'].includes(unit)) ? '¥'
+    : (['美元', 'USD', 'US$', '$'].includes(normalized) || ['美元', '$'].includes(unit)) ? '$'
+      : (['欧元', 'EUR', '€'].includes(normalized) || ['欧元', '€'].includes(unit)) ? '€'
+        : unit
+  return ['¥', '$', '€', '£'].includes(mark) ? `${mark}${fmtNum(n)}` : `${fmtNum(n)}${mark}`
+}
 function financialContext(mon, roi) {
   let out = ''
   if (mon?.model) out += `\n\n【商业化方案】模式：${mon.model}；定价：${(mon.pricing || []).map((t) => `${t.tier} ${t.price}(${t.forWho})`).join('；')}`
   if (roi?.scenarios?.length) {
     const cur = roi.currency || '元', h = roi.horizonMonths || 12
-    const lines = roi.scenarios.map((s) => { const k = roiCalcServer(s, h); return `- ${s.name}：期内收入 ${cur}${fmtNum(k.revenue)}，净利润 ${cur}${fmtNum(k.net)}，ROI ${isFinite(k.roi) ? Math.round(k.roi * 100) + '%' : '∞'}，回本 ${isFinite(k.payback) ? Math.ceil(k.payback) + '月' : '—'}` }).join('\n')
+    const lines = roi.scenarios.map((s) => { const k = roiCalcServer(s, h); return `- ${s.name}：期内收入 ${fmtMoney(k.revenue, cur)}，净利润 ${fmtMoney(k.net, cur)}，ROI ${isFinite(k.roi) ? Math.round(k.roi * 100) + '%' : '∞'}，回本 ${isFinite(k.payback) ? Math.ceil(k.payback) + '月' : '—'}` }).join('\n')
     out += `\n\n【ROI/收入预估】货币 ${cur}，评估期 ${h} 个月：\n${lines}`
   }
   return out
@@ -251,15 +308,15 @@ app.post('/api/slides', async (req, res) => {
     '- 涉及"计划/排期""市场/竞品""数据指标"的页用 table(headers + rows) 呈现，rows ≤ 5 行、列 ≤ 4；这类页 bullets 可只放 1-2 条概述；\n' +
     '- 中文，措辞精炼有力。'
   try {
-    const text = await completeText({
-      ...b,
+    const deck = await completeStructured(b, {
       system: sys,
       messages: [{ role: 'user', content: md }],
       format: SLIDES_SCHEMA,
       effort: 'low',
-      max_tokens: 4000,
+      max_tokens: 5500,
+      label: 'PPT 大纲',
     })
-    res.json(parseModelJson(text))
+    res.json(deck)
   } catch (e) {
     res.status(500).json({ error: e?.message || String(e) })
   }
@@ -336,21 +393,22 @@ function productRecap(p = {}) {
 }
 
 app.post('/api/prd-outline', async (req, res) => {
+  const b = req.body || {}
   const product = req.body?.product || {}
   const sys =
     '你是资深 LLM 产品专家。基于产品信息，给出该 PRD 的"共享骨架"，供后续各章节保持一致：' +
     'tagline(一句话价值主张)、version(从 V1.0.0 起)、personas(3-4 个用户角色，每个含 role 与 scene)、' +
     'modules(3-4 个核心功能模块名)。中文，精炼具体，不要套话。'
   try {
-    const text = await completeText({
-      ...req.body,
+    const outline = await completeStructured(b, {
       system: sys,
       messages: [{ role: 'user', content: productRecap(product) }],
       format: OUTLINE_SCHEMA,
       effort: 'low',
       max_tokens: 1200,
+      label: 'PRD 骨架',
     })
-    res.json(parseModelJson(text))
+    res.json(outline)
   } catch (e) {
     res.status(500).json({ error: e?.message || String(e) })
   }
@@ -409,11 +467,11 @@ app.post('/api/answer', async (req, res) => {
   if (!query.trim()) return res.status(400).json({ error: 'empty query' })
   const { provider } = resolve(b)
 
-  // DeepSeek has no server-side web search tool → answer from model knowledge.
-  if (provider === 'deepseek') {
+  // OpenAI-compatible providers have no project-integrated web search tool.
+  if (provider !== 'anthropic') {
     try {
       const text = await completeText({ ...b, system: ANSWER_SYS_NOWEB, messages: [{ role: 'user', content: query }], max_tokens: 2048, format: null })
-      return res.json({ text, sources: [], note: 'DeepSeek 暂不支持联网检索，已用模型内置知识回答（可能不含最新信息）。' })
+      return res.json({ text, sources: [], note: '当前服务商未接入联网检索，已用模型内置知识回答（可能不含最新信息）。' })
     } catch (e) {
       return res.status(500).json({ error: e?.message || String(e) })
     }
@@ -629,7 +687,7 @@ app.post('/api/compete', async (req, res) => {
   if (!dossier) {
     try {
       dossier = await completeText({ ...b, system: RESEARCH_SYS_NOWEB, messages: [{ role: 'user', content: query }], max_tokens: 1500 })
-      note = provider === 'anthropic' ? 'web 检索不可用，已用模型内置知识分析（可能不含最新信息）。' : 'DeepSeek 暂不支持联网，已用模型内置知识分析（可能不含最新信息）。'
+      note = provider === 'anthropic' ? 'web 检索不可用，已用模型内置知识分析（可能不含最新信息）。' : '当前服务商未接入联网检索，已用模型内置知识分析（可能不含最新信息）。'
     } catch (e) {
       return res.status(500).json({ error: e?.message || String(e) })
     }
@@ -694,7 +752,7 @@ async function researchProduct(b, p) {
   }
   if (!dossier) {
     dossier = await completeText({ ...b, system: RESEARCH_SYS_NOWEB, messages: [{ role: 'user', content: query }], max_tokens: 1200 })
-    note = provider === 'anthropic' ? 'web 检索部分不可用，含模型内置知识。' : 'DeepSeek 暂不支持联网，用模型内置知识。'
+    note = provider === 'anthropic' ? 'web 检索部分不可用，含模型内置知识。' : '当前服务商未接入联网检索，使用模型内置知识。'
   }
   return { dossier, sources, note }
 }
@@ -763,6 +821,7 @@ const FIT_SCHEMA = {
   },
 }
 app.post('/api/fit', async (req, res) => {
+  const b = req.body || {}
   const p = req.body?.product || {}
   const sys =
     `你是 LLM 产品策略专家，熟悉下面 14 种范式：\n${PARADIGM_BRIEF}\n` +
@@ -770,8 +829,8 @@ app.post('/api/fit', async (req, res) => {
     '必须覆盖全部 14 个 id。summary 用一两句话点出最契合的方向。中文，判断有依据。'
   const msg = `名称：${p.name || ''}\n定位：${p.positioning || ''}\n人群：${p.audience || ''}\n形态：${p.ui || ''}\n功能：${p.features || ''}`
   try {
-    const text = await completeText({ ...req.body, system: sys, messages: [{ role: 'user', content: msg }], format: FIT_SCHEMA, effort: 'medium', max_tokens: 3000 })
-    res.json(parseModelJson(text))
+    const result = await completeStructured(b, { system: sys, messages: [{ role: 'user', content: msg }], format: FIT_SCHEMA, effort: 'medium', max_tokens: 3500, label: '范式契合度分析' })
+    res.json(result)
   } catch (e) { res.status(500).json({ error: e?.message || String(e) }) }
 })
 
@@ -799,8 +858,8 @@ app.post('/api/review', async (req, res) => {
     '可行性、商业逻辑、技术合理性(尤其 LLM 特有：幻觉/成本/降级/安全)、需求清晰度、风险与遗漏、完整性。' +
     'overall 给总分；issues 列出具体问题(标严重度 高/中/低)；improvements 给可执行的改进建议。中文，犀利、具体、对事不对人。'
   try {
-    const text = await completeText({ ...b, system: sys, messages: [{ role: 'user', content: doc }], format: REVIEW_SCHEMA, effort: 'medium', max_tokens: 2500 })
-    res.json(parseModelJson(text))
+    const review = await completeStructured(b, { system: sys, messages: [{ role: 'user', content: doc }], format: REVIEW_SCHEMA, effort: 'medium', max_tokens: 3000, label: '红队评审' })
+    res.json(review)
   } catch (e) { res.status(500).json({ error: e?.message || String(e) }) }
 })
 
@@ -816,6 +875,7 @@ const BMC_SCHEMA = {
   },
 }
 app.post('/api/bmc', async (req, res) => {
+  const b = req.body || {}
   const p = req.body?.product || {}
   const sys =
     '你是商业模式专家。基于产品信息填写商业模式画布的九个要素，每个 3-5 条要点，具体不空泛：' +
@@ -823,8 +883,8 @@ app.post('/api/bmc', async (req, res) => {
     'revenueStreams(收入来源)、keyResources(核心资源)、keyActivities(关键业务)、keyPartners(重要伙伴)、costStructure(成本结构)。中文。'
   const msg = `名称：${p.name || ''}\n定位：${p.positioning || ''}\n人群：${p.audience || ''}\n形态：${p.ui || ''}\n功能：${p.features || ''}`
   try {
-    const text = await completeText({ ...req.body, system: sys, messages: [{ role: 'user', content: msg }], format: BMC_SCHEMA, effort: 'medium', max_tokens: 2500 })
-    res.json(parseModelJson(text))
+    const canvas = await completeStructured(b, { system: sys, messages: [{ role: 'user', content: msg }], format: BMC_SCHEMA, effort: 'medium', max_tokens: 3000, label: '商业模式画布' })
+    res.json(canvas)
   } catch (e) { res.status(500).json({ error: e?.message || String(e) }) }
 })
 
@@ -881,6 +941,7 @@ const MONETIZE_SCHEMA = {
   },
 }
 app.post('/api/monetize', async (req, res) => {
+  const b = req.body || {}
   const p = req.body?.product || {}
   const paradigm = req.body?.paradigm || ''
   const pdesc = req.body?.paradigmDesc || ''
@@ -896,8 +957,8 @@ app.post('/api/monetize', async (req, res) => {
     '务必结合该范式的变现特性（如陪伴卖情感订阅、创作按产出量、Agent 按成果/任务计费、Copilot 提粘性走席位、答案引擎订阅+API、企业 RAG 按席位/调用量、平台层抽成）。中文，具体可落地。'
   const msg = `名称：${p.name || ''}\n定位：${p.positioning || ''}\n人群：${p.audience || ''}\n形态：${p.ui || ''}\n功能：${p.features || ''}`
   try {
-    const text = await completeText({ ...req.body, system: sys, messages: [{ role: 'user', content: msg }], format: MONETIZE_SCHEMA, effort: 'medium', max_tokens: 3000 })
-    res.json(parseModelJson(text))
+    const strategy = await completeStructured(b, { system: sys, messages: [{ role: 'user', content: msg }], format: MONETIZE_SCHEMA, effort: 'medium', max_tokens: 4500, label: '商业化策略' })
+    res.json(strategy)
   } catch (e) { res.status(500).json({ error: e?.message || String(e) }) }
 })
 
@@ -935,6 +996,7 @@ const ROI_SCHEMA = {
   },
 }
 app.post('/api/roi', async (req, res) => {
+  const b = req.body || {}
   const p = req.body?.product || {}
   const paradigm = req.body?.paradigm || ''
   const pdesc = req.body?.paradigmDesc || ''
@@ -949,8 +1011,8 @@ app.post('/api/roi', async (req, res) => {
     'assumptionNotes：这些数字的依据与口径说明；drivers：对结果最敏感的驱动因素；risks：预估风险。中文，数字务实。'
   const msg = `名称：${p.name || ''}\n定位：${p.positioning || ''}\n人群：${p.audience || ''}\n功能：${p.features || ''}${monText}`
   try {
-    const text = await completeText({ ...req.body, system: sys, messages: [{ role: 'user', content: msg }], format: ROI_SCHEMA, effort: 'medium', max_tokens: 2500 })
-    res.json(parseModelJson(text))
+    const projection = await completeStructured(b, { system: sys, messages: [{ role: 'user', content: msg }], format: ROI_SCHEMA, effort: 'medium', max_tokens: 3500, label: 'ROI 测算' })
+    res.json(projection)
   } catch (e) { res.status(500).json({ error: e?.message || String(e) }) }
 })
 
@@ -958,9 +1020,8 @@ const server = app.listen(PORT, () => console.log(`[server] proxy listening on h
 server.on('error', (e) => {
   if (e.code === 'EADDRINUSE') {
     console.error(
-      `\n[FATAL] 端口 ${PORT} 已被占用 —— 很可能有一个旧的后端仍在运行（它不含最新的 /api 路由，` +
-        `会导致前端收到 HTML、报 "Unexpected token '<'"）。\n` +
-        `  请先结束旧进程，再重启：\n    lsof -ti tcp:${PORT} | xargs kill -9\n`
+      `\n[FATAL] 端口 ${PORT} 已被占用。\n` +
+        '  推荐改用 npm run local，它会自动寻找可用端口并打开匹配的前端地址。\n'
     )
     process.exit(1)
   }

@@ -13,16 +13,26 @@ import RoiBlock from '../components/RoiBlock.jsx'
 import RedTeam from '../components/RedTeam.jsx'
 import ExportAll from '../components/ExportAll.jsx'
 import DemoSandbox from '../DemoSandbox.jsx'
+import OperationStatus from '../components/OperationStatus.jsx'
+import { downloadMd, downloadDoc, printReport } from '../reportExport.js'
 
 const STEPS = [
   { n: 1, icon: '📝', title: '背景与目标' },
   { n: 2, icon: '🧩', title: '范式与竞品' },
-  { n: 3, icon: '🛠️', title: 'Demo' },
-  { n: 4, icon: '📄', title: 'PRD' },
-  { n: 5, icon: '💰', title: '商业化 & ROI' },
+  { n: 3, icon: '💰', title: '商业化 & ROI' },
+  { n: 4, icon: '🛠️', title: 'Demo' },
+  { n: 5, icon: '📄', title: 'PRD' },
   { n: 6, icon: '📑', title: '汇报' },
   { n: 7, icon: '📊', title: 'PPT' },
 ]
+const BUSY_LABELS = {
+  fit: '正在评估产品范式并生成诊断',
+  cmp: '正在分析竞品',
+  mon: '正在设计商业化策略',
+  prd: '正在生成完整 PRD',
+  prop: '正在撰写汇报',
+  ppt: '正在生成 PPT 大纲并制作文件',
+}
 const mapPrd = (p) => ({ name: p.name, users: p.audience, capability: p.features, painpoint: p.positioning, extra: p.ui ? `界面/形态：${p.ui}` : '' })
 const bestParadigm = (p) => {
   const a = p.artifacts || {}
@@ -40,7 +50,7 @@ function FlowHome({ nav }) {
     <div className="flow"><div className="flow-wrap">
       <div className="flow-hero">
         <h1>🚀 产品改造主线</h1>
-        <p>一条龙走完：背景目标 → 范式与竞品 → Demo → PRD → 商业化/ROI → 汇报 → PPT。每步产出自动保存、数字贯通。</p>
+        <p>一条龙走完：背景目标 → 范式与竞品 → 商业化/ROI → Demo → PRD → 汇报 → PPT。每步产出自动保存、数字贯通。</p>
       </div>
       <div className="flow-start">
         <label className="field-label">新建一个产品开始</label>
@@ -103,15 +113,49 @@ function Wizard({ pid, nav }) {
   const best = bestParadigm(p)
   const recId = a.diagnosis?.recommended || (a.fit?.scores?.length ? [...a.fit.scores].sort((x, y) => y.score - x.score)[0].id : null)
   const guide = recId ? GUIDE[recId] : null
-  const done = { 1: !!(p.name && p.features), 2: !!(a.fit || a.diagnosis), 3: !!a.flowDemo, 4: !!prdMd, 5: !!(a.monetization && a.roi), 6: !!propMd, 7: !!a.flowPpt }
+  const done = { 1: !!(p.name && p.features), 2: !!(a.fit || a.diagnosis), 3: !!(a.monetization && a.roi), 4: !!a.flowDemo, 5: !!prdMd, 6: !!propMd, 7: !!a.flowPpt }
 
   const saveBrief = () => { upsertProduct({ ...p, ...edit }); reload() }
-  const runFit = async () => { setBusy('fit'); setErr(''); try { const [f, d] = await Promise.all([getFit(p), advise(p, p.goal || edit.goal || '评估最适合的范式与落地方向')]); saveArtifact(pid, 'fit', f); saveArtifact(pid, 'diagnosis', d); reload() } catch (e) { setErr(e.message || String(e)) } finally { setBusy('') } }
+  const runFit = async () => {
+    setBusy('fit'); setErr('')
+    try {
+      const [fitResult, diagnosisResult] = await Promise.allSettled([
+        getFit(p),
+        advise(p, p.goal || edit.goal || '评估最适合的范式与落地方向'),
+      ])
+      if (fitResult.status === 'fulfilled') saveArtifact(pid, 'fit', fitResult.value)
+      if (diagnosisResult.status === 'fulfilled') saveArtifact(pid, 'diagnosis', diagnosisResult.value)
+      reload()
+      const errors = [fitResult, diagnosisResult].filter((r) => r.status === 'rejected').map((r) => r.reason?.message || String(r.reason))
+      if (errors.length) throw new Error(errors.join('；'))
+    } catch (e) {
+      setErr(e.message || String(e))
+    } finally {
+      setBusy('')
+    }
+  }
   const runCmp = async () => { if (!cName.trim()) return; setBusy('cmp'); setErr(''); try { setCRes(await analyzeCompetitor({ name: cName })) } catch (e) { setErr(e.message || String(e)) } finally { setBusy('') } }
-  const genPrd = async () => { setBusy('prd'); setErr(''); setPrdMd(''); try { const full = await streamPrd({ product: mapPrd(p), onText: setPrdMd }); saveArt('prd', full) } catch (e) { setErr(e.message || String(e)) } finally { setBusy('') } }
+  const genPrd = async () => { const previous = prdMd; setBusy('prd'); setErr(''); setPrdMd(''); try { const full = await streamPrd({ product: mapPrd(p), onText: setPrdMd }); if (!full.trim()) throw new Error('模型没有返回 PRD 内容，请重试'); saveArt('prd', full) } catch (e) { setPrdMd(previous); setErr(e.message || String(e)) } finally { setBusy('') } }
   const genMon = async () => { setBusy('mon'); setErr(''); try { saveArt('monetization', await genMonetize(p, best?.title || '', best?.blurb || '')) } catch (e) { setErr(e.message || String(e)) } finally { setBusy('') } }
-  const genProp = async () => { setBusy('prop'); setErr(''); setPropMd(''); try { const full = await streamProposal({ product: mapPrd(p), paradigm: best?.title || '最契合范式', paradigmDesc: best?.blurb || '', monetization: a.monetization, roi: a.roi, onText: setPropMd }); saveArt('proposal', full) } catch (e) { setErr(e.message || String(e)) } finally { setBusy('') } }
-  const genPpt = async () => { setBusy('ppt'); setErr(''); setPptMsg(''); try { const deck = await genSlides(propMd || prdMd); const { buildPptx } = await import('../pptx.js'); await buildPptx(deck, `${(p.name || '汇报').replace(/\s+/g, '_')}-汇报.pptx`); saveArt('flowPpt', true); setPptMsg(`✓ 已生成 ${(deck.slides?.length || 0) + 1} 页并下载`) } catch (e) { setErr(e.message || String(e)) } finally { setBusy('') } }
+  const genProp = async () => { const previous = propMd; setBusy('prop'); setErr(''); setPropMd(''); try { const full = await streamProposal({ product: mapPrd(p), paradigm: best?.title || '最契合范式', paradigmDesc: best?.blurb || '', monetization: a.monetization, roi: a.roi, onText: setPropMd }); if (!full.trim()) throw new Error('模型没有返回汇报内容，请重试'); saveArt('proposal', full) } catch (e) { setPropMd(previous); setErr(e.message || String(e)) } finally { setBusy('') } }
+  const genPpt = async () => {
+    setBusy('ppt'); setErr(''); setPptMsg('')
+    try {
+      const deck = await genSlides(propMd || prdMd)
+      const { buildPptx } = await import('../pptx.js')
+      await buildPptx(deck, `${(p.name || '汇报').replace(/\s+/g, '_')}-汇报.pptx`)
+      saveArt('flowPpt', true)
+      setPptMsg(`✓ 已生成 ${(deck.slides?.length || 0) + 1} 页并下载`)
+    } catch (e) {
+      const msg = e.message || String(e)
+      setErr(msg.includes('模型返回格式') ? `${msg} PPT 不要求多模态；这是当前模型的结构化输出兼容问题，可重试或切换模型。` : msg)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  const prdName = `${p.name || '产品'}-PRD`
+  const proposalName = `${p.name || '产品'}-汇报`
 
   const F = [['name', '产品名称', true], ['positioning', '定位'], ['audience', '目标人群'], ['ui', '界面 / 形态'], ['features', '主要功能'], ['goal', '本次改造目标']]
 
@@ -168,25 +212,8 @@ function Wizard({ pid, nav }) {
       )
       case 3: return (
         <div className="flow-step">
-          <h2>🛠️ 第三步 · 可交互 Demo</h2>
-          <p className="flow-sub">为这个产品现场生成一个可玩的原型（内部 AI 真实调用）。</p>
-          <DemoSandbox spec={`产品：${p.name}\n定位：${p.positioning}\n主要功能：${p.features}\n请据此做一个该产品核心功能的可交互原型。`} paradigm={best?.title || ''} productName={p.name} />
-          <button className="ghost flow-mark" onClick={() => saveArt('flowDemo', true)}>{a.flowDemo ? '✓ 已标记完成' : '标记这步完成'}</button>
-        </div>
-      )
-      case 4: return (
-        <div className="flow-step">
-          <h2>📄 第四步 · PRD</h2>
-          <p className="flow-sub">生成完整 PRD，并可红队评审、按评审一键修订。</p>
-          <button className="primary" onClick={genPrd} disabled={busy === 'prd'}>{busy === 'prd' ? '生成中…' : prdMd ? '🔄 重新生成 PRD' : '📄 生成 PRD'}</button>
-          {(prdMd || busy === 'prd') && <article className="md-doc flow-doc">{busy === 'prd' && !prdMd && <Spinner label="撰写 PRD" />}<ReactMarkdown remarkPlugins={[remarkGfm]}>{prdMd}</ReactMarkdown></article>}
-          {prdMd && busy !== 'prd' && <RedTeam doc={prdMd} kind="PRD" cached={a.prdReview} onResult={(r) => saveArt('prdReview', r)} onRevise={(full) => { setPrdMd(full); saveArt('prd', full) }} />}
-        </div>
-      )
-      case 5: return (
-        <div className="flow-step">
-          <h2>💰 第五步 · 商业化策略 & ROI</h2>
-          <p className="flow-sub">设计变现模式、价值阶梯与定价逻辑，再测算 ROI 与预期收入（可调）。</p>
+          <h2>💰 第三步 · 商业化策略 & ROI</h2>
+          <p className="flow-sub">先判断如何变现、价值阶梯与定价逻辑，再测算 ROI 与预期收入（可调），为后续 Demo 和 PRD 提供约束。</p>
           <button className="primary" onClick={genMon} disabled={busy === 'mon'}>{busy === 'mon' ? '设计中…' : a.monetization ? '🔄 重新设计商业化' : '💰 设计商业化策略'}</button>
           {a.monetization && <div className="flow-mt"><Monetization data={a.monetization} /></div>}
           {a.monetization && (
@@ -197,11 +224,48 @@ function Wizard({ pid, nav }) {
           )}
         </div>
       )
+      case 4: return (
+        <div className="flow-step">
+          <h2>🛠️ 第四步 · 可交互 Demo</h2>
+          <p className="flow-sub">在范式和商业逻辑明确后，为这个产品生成一个可玩的核心原型（内部 AI 真实调用）。</p>
+          <DemoSandbox spec={`产品：${p.name}\n定位：${p.positioning}\n主要功能：${p.features}\n商业化模式：${a.monetization?.model || '待验证'}\n请据此做一个该产品核心功能的可交互原型。`} paradigm={best?.title || ''} productName={p.name} />
+          <button className="ghost flow-mark" onClick={() => saveArt('flowDemo', true)}>{a.flowDemo ? '✓ 已标记完成' : '标记这步完成'}</button>
+        </div>
+      )
+      case 5: return (
+        <div className="flow-step">
+          <h2>📄 第五步 · PRD</h2>
+          <p className="flow-sub">生成完整 PRD，并可下载、红队评审和一键修订。修订完成后，新版会替换当前 PRD，后续下载自动使用新版。</p>
+          <div className="flow-action-row">
+            <button className="primary" onClick={genPrd} disabled={busy === 'prd'}>{busy === 'prd' ? '生成中…' : prdMd ? '🔄 重新生成 PRD' : '📄 生成 PRD'}</button>
+            {prdMd && busy !== 'prd' && (
+              <div className="flow-export">
+                <span>下载当前 PRD</span>
+                <button onClick={() => downloadMd(prdName, prdMd)}>⬇ .md</button>
+                <button onClick={() => downloadDoc(prdName, prdMd)}>⬇ Word</button>
+                <button onClick={() => printReport(prdName, prdMd)}>🖨️ PDF</button>
+              </div>
+            )}
+          </div>
+          {(prdMd || busy === 'prd') && <article className="md-doc flow-doc">{busy === 'prd' && !prdMd && <Spinner label="撰写 PRD" />}<ReactMarkdown remarkPlugins={[remarkGfm]}>{prdMd}</ReactMarkdown></article>}
+          {prdMd && busy !== 'prd' && <RedTeam doc={prdMd} kind="PRD" cached={a.prdReview} onResult={(r) => saveArt('prdReview', r)} onRevise={(full) => { setPrdMd(full); saveArtifact(pid, 'prd', full); saveArtifact(pid, 'prdRevisedAt', new Date().toISOString()); reload() }} />}
+        </div>
+      )
       case 6: return (
         <div className="flow-step">
           <h2>📑 第六步 · 汇报（提案方案）</h2>
           <p className="flow-sub">生成一份完整汇报：背景/目标/数据/升级策略/Demo/需求/市场/预期计划{a.roi ? '（预期计划自动带入 ROI 收入预测）' : ''}。</p>
-          <button className="primary" onClick={genProp} disabled={busy === 'prop'}>{busy === 'prop' ? '撰写中…' : propMd ? '🔄 重新生成汇报' : '📑 生成汇报'}</button>
+          <div className="flow-action-row">
+            <button className="primary" onClick={genProp} disabled={busy === 'prop'}>{busy === 'prop' ? '撰写中…' : propMd ? '🔄 重新生成汇报' : '📑 生成汇报'}</button>
+            {propMd && busy !== 'prop' && (
+              <div className="flow-export">
+                <span>单独下载汇报</span>
+                <button onClick={() => downloadMd(proposalName, propMd)}>⬇ .md</button>
+                <button onClick={() => downloadDoc(proposalName, propMd)}>⬇ Word</button>
+                <button onClick={() => printReport(proposalName, propMd)}>🖨️ PDF</button>
+              </div>
+            )}
+          </div>
           {(propMd || busy === 'prop') && <article className="md-doc flow-doc">{busy === 'prop' && !propMd && <Spinner label="撰写汇报" />}<ReactMarkdown remarkPlugins={[remarkGfm]}>{propMd}</ReactMarkdown></article>}
         </div>
       )
@@ -210,7 +274,8 @@ function Wizard({ pid, nav }) {
           <h2>📊 第七步 · 路演 PPT</h2>
           <p className="flow-sub">把汇报浓缩成一套可下载的 .pptx（封面 + 要点 + 表格）。</p>
           <button className="primary" onClick={genPpt} disabled={busy === 'ppt' || (!propMd && !prdMd)}>{busy === 'ppt' ? '生成中…' : '📊 生成并下载 PPT'}</button>
-          {!propMd && !prdMd && <div className="flow-hint">先在第 4 或第 6 步生成 PRD / 汇报，再导出 PPT。</div>}
+          <div className="flow-hint">PPT 由当前文本模型生成结构化大纲，再由本机制作文件，不要求模型具备图片或多模态能力。</div>
+          {!propMd && !prdMd && <div className="flow-hint">先在第 5 或第 6 步生成 PRD / 汇报，再导出 PPT。</div>}
           {pptMsg && <div className="flow-ok">{pptMsg}</div>}
           <div className="flow-finish">
             <p>🎉 主线走完！把这个产品的全部产出导出成一份总报告：</p>
@@ -240,6 +305,7 @@ function Wizard({ pid, nav }) {
       </div>
 
       {err && <div className="error-box flow-mt">⚠️ {err}</div>}
+      <OperationStatus active={!!busy} label={BUSY_LABELS[busy] || '正在处理'} />
       <div className="flow-body">{renderStep()}</div>
 
       <div className="flow-nav">

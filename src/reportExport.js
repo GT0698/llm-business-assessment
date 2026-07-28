@@ -26,6 +26,7 @@ export function downloadDoc(name, md) {
     `h1{font-size:20pt}h2{font-size:15pt;border-bottom:1px solid #ccc;padding-bottom:4px}` +
     `table{border-collapse:collapse;width:100%}th,td{border:1px solid #888;padding:5px 9px;font-size:10.5pt}th{background:#f2f2f2}` +
     `blockquote{border-left:3px solid #888;margin:8px 0;padding:4px 12px;color:#555;background:#f7f7f7}` +
+    `.report-page-break{page-break-after:always;break-after:page;height:1px}` +
     `</style></head><body>${html}</body></html>`
   download(`${safeName(name)}.doc`, full, 'application/msword')
 }
@@ -40,6 +41,7 @@ export function printReport(name, md) {
     `h1{font-size:24px}h2{font-size:18px;border-bottom:1px solid #ddd;padding-bottom:5px;margin-top:30px}h3{font-size:15px}` +
     `table{border-collapse:collapse;width:100%;margin:10px 0}th,td{border:1px solid #999;padding:5px 9px;font-size:12.5px;text-align:left}th{background:#f2f2f2}` +
     `blockquote{border-left:3px solid #999;margin:8px 0;padding:4px 12px;color:#555;background:#f7f7f7}code{background:#eee;padding:1px 4px}` +
+    `.report-page-break{page-break-after:always;break-after:page;height:1px}` +
     `@media print{a{color:#000;text-decoration:none}}` +
     `</style></head><body>${html}</body></html>`
   )
