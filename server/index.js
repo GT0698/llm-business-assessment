@@ -24,15 +24,23 @@ function parseModelJson(text) {
 
 const PORT = process.env.PORT || 8787
 
-if (!process.env.ANTHROPIC_API_KEY && !process.env.DEEPSEEK_API_KEY) {
+if (
+  !process.env.ANTHROPIC_API_KEY &&
+  !process.env.DEEPSEEK_API_KEY &&
+  !process.env.OPENCODE_API_KEY &&
+  !process.env.OPENAI_COMPATIBLE_API_KEY
+) {
   console.warn(
-    '\n[!] 未检测到 ANTHROPIC_API_KEY 或 DEEPSEEK_API_KEY。\n' +
-      '    可以 export 其一，或在网页右下角 ⚙️ 模型设置里填入 key。\n'
+    '\n[!] 未检测到服务端 API Key。\n' +
+      '    可以设置环境变量，或在网页右下角 ⚙️ 模型设置里填入 key。\n'
   )
 }
 
 const app = express()
 app.use(express.json({ limit: '2mb' }))
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, service: 'llm-paradigms', version: '0.2.0' })
+})
 
 // --- Streaming chat: writes raw text deltas to the response body ---
 app.post('/api/chat', async (req, res) => {
@@ -409,11 +417,11 @@ app.post('/api/answer', async (req, res) => {
   if (!query.trim()) return res.status(400).json({ error: 'empty query' })
   const { provider } = resolve(b)
 
-  // DeepSeek has no server-side web search tool → answer from model knowledge.
-  if (provider === 'deepseek') {
+  // OpenAI-compatible providers have no project-integrated web search tool.
+  if (provider !== 'anthropic') {
     try {
       const text = await completeText({ ...b, system: ANSWER_SYS_NOWEB, messages: [{ role: 'user', content: query }], max_tokens: 2048, format: null })
-      return res.json({ text, sources: [], note: 'DeepSeek 暂不支持联网检索，已用模型内置知识回答（可能不含最新信息）。' })
+      return res.json({ text, sources: [], note: '当前服务商未接入联网检索，已用模型内置知识回答（可能不含最新信息）。' })
     } catch (e) {
       return res.status(500).json({ error: e?.message || String(e) })
     }
@@ -629,7 +637,7 @@ app.post('/api/compete', async (req, res) => {
   if (!dossier) {
     try {
       dossier = await completeText({ ...b, system: RESEARCH_SYS_NOWEB, messages: [{ role: 'user', content: query }], max_tokens: 1500 })
-      note = provider === 'anthropic' ? 'web 检索不可用，已用模型内置知识分析（可能不含最新信息）。' : 'DeepSeek 暂不支持联网，已用模型内置知识分析（可能不含最新信息）。'
+      note = provider === 'anthropic' ? 'web 检索不可用，已用模型内置知识分析（可能不含最新信息）。' : '当前服务商未接入联网检索，已用模型内置知识分析（可能不含最新信息）。'
     } catch (e) {
       return res.status(500).json({ error: e?.message || String(e) })
     }
@@ -694,7 +702,7 @@ async function researchProduct(b, p) {
   }
   if (!dossier) {
     dossier = await completeText({ ...b, system: RESEARCH_SYS_NOWEB, messages: [{ role: 'user', content: query }], max_tokens: 1200 })
-    note = provider === 'anthropic' ? 'web 检索部分不可用，含模型内置知识。' : 'DeepSeek 暂不支持联网，用模型内置知识。'
+    note = provider === 'anthropic' ? 'web 检索部分不可用，含模型内置知识。' : '当前服务商未接入联网检索，使用模型内置知识。'
   }
   return { dossier, sources, note }
 }
@@ -958,9 +966,8 @@ const server = app.listen(PORT, () => console.log(`[server] proxy listening on h
 server.on('error', (e) => {
   if (e.code === 'EADDRINUSE') {
     console.error(
-      `\n[FATAL] 端口 ${PORT} 已被占用 —— 很可能有一个旧的后端仍在运行（它不含最新的 /api 路由，` +
-        `会导致前端收到 HTML、报 "Unexpected token '<'"）。\n` +
-        `  请先结束旧进程，再重启：\n    lsof -ti tcp:${PORT} | xargs kill -9\n`
+      `\n[FATAL] 端口 ${PORT} 已被占用。\n` +
+        '  推荐改用 npm run local，它会自动寻找可用端口并打开匹配的前端地址。\n'
     )
     process.exit(1)
   }

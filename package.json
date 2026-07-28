@@ -1,9 +1,10 @@
 {
   "name": "llm-paradigms",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
+    "local": "node scripts/start-local.mjs",
     "dev": "concurrently -n server,web -c magenta,cyan \"node server/index.js\" \"vite\"",
     "server": "node server/index.js",
     "web": "vite",

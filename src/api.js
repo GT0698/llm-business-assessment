@@ -4,7 +4,7 @@ import { withConfig } from './modelConfig.js'
 import { parseLenient } from './jsonutil.js'
 
 const BACKEND_DOWN =
-  '后端未连接或为旧版本（/api 返回了 HTML）。请重启后端：先结束占用 8787 端口的旧进程（lsof -ti tcp:8787 | xargs kill -9），再运行 npm run dev。'
+  '本地服务未连接或连接到了旧版本。请关闭当前页面，在项目目录运行 npm run local；它会自动避开被占用的端口并打开正确地址。'
 
 // If the proxy falls through to the SPA, we get text/html instead of our JSON/stream.
 function assertApi(res) {

@@ -14,7 +14,8 @@ window.AI = async function(prompt, opts){
   var base = '';
   try{ base = (window.parent && window.parent.location && window.parent.location.origin) || ''; }catch(e){}
   var body = { messages:[{role:'user',content:String(prompt)}], system: opts.system||'',
-    provider: cfg.provider, model: cfg.model, apiKey: cfg.apiKey, baseURL: cfg.baseURL,
+    provider: cfg.provider, model: cfg.provider==='openai-compatible' ? cfg.customModel : cfg.model,
+    apiKey: cfg.apiKey, baseURL: cfg.baseURL, outputInstructions: cfg.outputInstructions,
     max_tokens: opts.max_tokens||800 };
   var res = await fetch(base + '/api/chat', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(!res.ok || !res.body){ throw new Error('AI 请求失败 ('+res.status+')'); }
