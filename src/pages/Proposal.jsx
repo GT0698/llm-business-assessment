@@ -122,7 +122,7 @@ export default function Proposal() {
       <div className="prd-topbar no-print">
         <button className="back" onClick={() => nav(`/guide/${id}`)}>← 返回方法论</button>
         <div className="prd-top-actions">
-          <Link className="guide-link" to={`/p/${id}`}>▶ 体验 demo</Link>
+          <Link className="guide-link" to={`/guide/${id}`}>📖 范式方法论</Link>
           {md && !busy && <button className={`guide-link ${editing ? 'on' : ''}`} onClick={() => setEditing((e) => !e)}>{editing ? '✓ 完成编辑' : '✏️ 编辑'}</button>}
           {md && !busy && <button className="guide-link" onClick={copyMd}>{copied ? '✓ 已复制' : '⧉ 复制 MD'}</button>}
           {md && !busy && <button className="guide-link" onClick={exportMd}>⬇ .md</button>}

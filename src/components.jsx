@@ -1,6 +1,3 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { byId } from './paradigms.js'
-
 // Minimal, dependency-free markdown-ish renderer: headings, bullets, bold, code.
 export function Rich({ text }) {
   if (!text) return null
@@ -50,33 +47,6 @@ function inline(s) {
   }
   if (i < s.length) parts.push(s.slice(i))
   return parts
-}
-
-export function DemoShell({ id, children, intro }) {
-  const p = byId(id)
-  const nav = useNavigate()
-  return (
-    <div className="shell" style={{ '--accent': p.accent }}>
-      <header className="shell-top">
-        <button className="back" onClick={() => nav('/')}>← 全部范式</button>
-        <div className="shell-top-right">
-          <Link className="guide-link" to={`/guide/${id}`}>📖 产品方法论</Link>
-          <div className="shell-id">
-            <span className="dot" /> 范式 {p.n} · {p.en}
-          </div>
-        </div>
-      </header>
-      <div className="shell-head">
-        <div className="shell-emoji">{p.icon}</div>
-        <div>
-          <h1>{p.title}</h1>
-          <p className="shell-tag">{p.tag}</p>
-        </div>
-      </div>
-      {intro && <p className="shell-intro">{intro}</p>}
-      <div className="shell-body">{children}</div>
-    </div>
-  )
 }
 
 export function Spinner({ label = '生成中' }) {

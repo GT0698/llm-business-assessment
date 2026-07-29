@@ -188,7 +188,6 @@ export default function Advisor() {
                       </div>
                     </div>
                     <div className="rec-links">
-                      <Link className="primary" to={`/p/${rec.id}`}>▶ 体验 {rec.title} demo</Link>
                       <Link className="ghost" to={`/guide/${rec.id}`}>📖 该范式方法论</Link>
                     </div>
                   </div>

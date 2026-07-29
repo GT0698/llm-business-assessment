@@ -1,21 +1,6 @@
 import { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Home from './pages/Home.jsx'
-import ChatNative from './pages/ChatNative.jsx'
-import Companion from './pages/Companion.jsx'
-import CoCreation from './pages/CoCreation.jsx'
-import Copilot from './pages/Copilot.jsx'
-import Agent from './pages/Agent.jsx'
-import AnswerEngine from './pages/AnswerEngine.jsx'
-import RouterDemo from './pages/RouterDemo.jsx'
-import BizDemo from './pages/BizDemo.jsx'
-import RagDemo from './pages/biz/RagDemo.jsx'
-import BiDemo from './pages/biz/BiDemo.jsx'
-import SupportDemo from './pages/biz/SupportDemo.jsx'
-import AgentBizDemo from './pages/biz/AgentBizDemo.jsx'
-import DocIntelDemo from './pages/biz/DocIntelDemo.jsx'
-import CopilotBizDemo from './pages/biz/CopilotBizDemo.jsx'
-import PlatformDemo from './pages/biz/PlatformDemo.jsx'
 import Knowledge from './pages/Knowledge.jsx'
 import Prd from './pages/Prd.jsx'
 import Proposal from './pages/Proposal.jsx'
@@ -36,21 +21,6 @@ export default function App() {
       <TopNav />
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/p/chat" element={<ChatNative />} />
-        <Route path="/p/companion" element={<Companion />} />
-        <Route path="/p/create" element={<CoCreation />} />
-        <Route path="/p/copilot" element={<Copilot />} />
-        <Route path="/p/agent" element={<Agent />} />
-        <Route path="/p/answer" element={<AnswerEngine />} />
-        <Route path="/p/router" element={<RouterDemo />} />
-        <Route path="/p/rag" element={<RagDemo />} />
-        <Route path="/p/bizcopilot" element={<CopilotBizDemo />} />
-        <Route path="/p/support" element={<SupportDemo />} />
-        <Route path="/p/bizagent" element={<AgentBizDemo />} />
-        <Route path="/p/bi" element={<BiDemo />} />
-        <Route path="/p/docintel" element={<DocIntelDemo />} />
-        <Route path="/p/platform" element={<PlatformDemo />} />
-        <Route path="/p/:id" element={<BizDemo />} />
         <Route path="/guide/:id" element={<Knowledge />} />
         <Route path="/prd/:id" element={<Prd />} />
         <Route path="/proposal/:id" element={<Proposal />} />

@@ -73,7 +73,7 @@ export default function Knowledge() {
       </div>
 
       <div className="guide-nav">
-        <Link className="primary guide-cta" to={`/p/${id}`}>▶ 体验这个范式的 demo</Link>
+        <Link className="primary guide-cta" to="/flow">🚀 用这套方法评估产品</Link>
         <Link className="ghost guide-cta" to={`/proposal/${id}`}>📑 生成提案方案</Link>
         <span className="guide-blurb">{p.blurb}</span>
       </div>

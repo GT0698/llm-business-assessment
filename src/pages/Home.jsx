@@ -12,8 +12,7 @@ function Card({ p }) {
       <div className="card-en">{p.en} · {p.tag}</div>
       <p className="card-blurb">{p.blurb}</p>
       <div className="card-actions">
-        <Link to={`/p/${p.id}`} className="card-demo">进入 demo →</Link>
-        <Link to={`/guide/${p.id}`} className="card-guide">方法论</Link>
+        <Link to={`/guide/${p.id}`} className="card-guide">查看方法论 →</Link>
       </div>
     </div>
   )
@@ -26,15 +25,15 @@ export default function Home() {
     <div className="home">
       <div className="home-wrap">
         <header className="hero">
-          <div className="hero-kicker">LLM × toC · 产品范式地图</div>
+          <div className="hero-kicker">大模型商业范式评估</div>
           <h1>
-            LLM 导向的 toC 产品，
+            用范式与商业价值，
             <br />
-            有哪几种范式？
+            判断 AI 产品是否值得做
           </h1>
           <p className="hero-sub">
-            按「LLM 在产品里扮演什么角色」切分出 <strong>toC 7 种 + toB 7 种</strong> 范式。
-            每张卡片背后是一个<strong>真实调用大模型</strong>的可玩 demo + 一页产品方法论（含 PRD / 提案 / PPT 生成）。
+            从<strong>范式匹配、竞品分析、商业化与 ROI</strong>，到 Demo、PRD、汇报与 PPT，
+            把产品判断链路跑完整。
           </p>
         </header>
 
@@ -42,7 +41,7 @@ export default function Home() {
           <div className="fb-left">
             <span className="fb-emoji">🚀</span>
             <div>
-              <strong>产品改造主线 · 一条龙</strong>
+              <strong>商业评估主线 · 一条龙</strong>
               <p>背景目标 → 范式与竞品 → 商业化/ROI → Demo → PRD → 汇报 → PPT，7 步走完，数字贯通、产出自动保存。</p>
             </div>
           </div>
@@ -74,7 +73,7 @@ export default function Home() {
 
         <div className="cat-head">
           <h2>面向消费者 · toC</h2>
-          <span>模型在产品里扮演什么角色 —— 从「模型即界面」到「模型是隐形引擎」</span>
+          <span>一套通用范式地图，为评估与产品决策提供基础</span>
         </div>
         <div className="grid">
           {toc.map((p) => <Card p={p} key={p.id} />)}
@@ -82,7 +81,7 @@ export default function Home() {
 
         <div className="cat-head tob">
           <h2>面向企业 · toB</h2>
-          <span>把大模型能力嵌入企业工作流 —— 知识、副驾、客服、流程、分析、文档、平台</span>
+          <span>把大模型能力嵌入企业工作流，辅助判断产品的落地方式与商业价值</span>
         </div>
         <div className="grid">
           {tob.map((p) => <Card p={p} key={p.id} />)}

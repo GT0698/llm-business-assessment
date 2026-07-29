@@ -73,7 +73,7 @@ function SingleReport({ name, data }) {
               <div className="cmp-para" key={i} style={{ '--accent': p.accent }}>
                 <div className="cmp-para-head"><span className="cmp-para-ico">{p.icon}</span><div><strong>{p.title}</strong><span className={`cmp-role ${pp.role === '主要' ? 'main' : ''}`}>{pp.role}</span></div></div>
                 <p className="cmp-para-reason">{pp.reason}</p>
-                <div className="cmp-para-links"><Link to={`/guide/${p.id}`}>方法论</Link><Link to={`/p/${p.id}`}>demo</Link></div>
+                <div className="cmp-para-links"><Link to={`/guide/${p.id}`}>查看方法论</Link></div>
               </div>
             )
           })}
